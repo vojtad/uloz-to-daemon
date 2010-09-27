@@ -130,7 +130,8 @@ void CDaemon::sendUpdate()
 			}
 		}
 
-		if(!m_downloadManager.removed().isEmpty())
+		QList<quint32> removed = m_downloadManager.updateRemoveQueue();
+		if(!removed.isEmpty())
 		{
 			QByteArray buffer;
 			QDataStream stream(&buffer, QIODevice::WriteOnly);
@@ -138,9 +139,9 @@ void CDaemon::sendUpdate()
 			stream << quint32(0); // placeholder
 			stream << quint8(OPCODE_REMOVE);
 
-			while(!m_downloadManager.removed().isEmpty())
+			while(!removed.isEmpty())
 			{
-				quint32 id = m_downloadManager.removed().takeFirst();
+				quint32 id = removed.takeFirst();
 				stream << id;
 			}
 

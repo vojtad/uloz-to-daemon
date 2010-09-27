@@ -92,15 +92,7 @@ void CDownloadManager::startDownloads()
 
 void CDownloadManager::startDownload(quint32 i)
 {
-	CDownload * download = 0;
-	foreach(CDownload * d, m_downloads)
-	{
-		if(d->data().id == i)
-		{
-			download = d;
-		break;
-		}
-	}
+	CDownload * download = findDownload(i);
 
 	if(download != 0 && download->data().canStart())
 	{
@@ -118,33 +110,12 @@ void CDownloadManager::startDownload(quint32 i)
 
 void CDownloadManager::removeDownload(quint32 i)
 {
-	for(DownloadList::iterator it = m_downloads.begin(); it != m_downloads.end(); ++it)
-	{
-		if((*it)->data().id == i)
-		{
-			CDownload * d = *it;
-			if(d->data().canRemove())
-			{
-				m_removed.push_back(d->data().id);
-				m_downloads.erase(it);
-				delete d;
-			}
-			break;
-		}
-	}
+	m_removeQueue.push_back(i);
 }
 
 void CDownloadManager::abortDownload(quint32 i)
 {
-	CDownload * download = 0;
-	foreach(CDownload * d, m_downloads)
-	{
-		if(d->data().id == i)
-		{
-			download = d;
-			break;
-		}
-	}
+	CDownload * download = findDownload(i);
 
 	if(download != 0 && download->data().canAbort())
 	{
@@ -166,7 +137,45 @@ DownloadList & CDownloadManager::downloads()
 	return m_downloads;
 }
 
-QList<quint32> & CDownloadManager::removed()
+CDownload * CDownloadManager::findDownload(quint32 id)
 {
-	return m_removed;
+	foreach(CDownload * d, m_downloads)
+	{
+		if(d->data().id == id)
+			return d;
+	}
+
+	return 0;
+}
+
+QList<quint32> CDownloadManager::updateRemoveQueue()
+{
+	QList<quint32> removed;
+
+	QList<quint32>::iterator it = m_removeQueue.begin();
+	while(it != m_removeQueue.end())
+	{
+		CDownload * d = findDownload(*it);
+		if(d == 0)
+		{
+			it = m_removeQueue.erase(it);
+		}
+		else
+		{
+			if(d->data().canRemove())
+			{
+				removed.push_back(d->data().id);
+				m_downloads.removeOne(d);
+				delete d;
+			}
+			else
+			{
+				d->stop();
+			}
+
+			++it;
+		}
+	}
+
+	return removed;
 }

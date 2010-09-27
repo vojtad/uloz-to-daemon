@@ -42,10 +42,12 @@ class CDownloadManager : public QObject
 		void removeDownload(quint32 i);
 		void abortDownload(quint32 i);
 
+		QList<quint32> updateRemoveQueue();
+
 		DownloadList & downloads();
-		QList<quint32> & removed();
 
 	private:
+		CDownload * findDownload(quint32 id);
 		void updateWaiting();
 
 	private:
@@ -53,7 +55,7 @@ class CDownloadManager : public QObject
 		QStringList m_userAgents;
 		QString m_downloadDir;
 
-		QList<quint32> m_removed;
+		QList<quint32> m_removeQueue;
 		DownloadList m_downloads;
 		bool m_queue;
 		quint32 m_activeCount;

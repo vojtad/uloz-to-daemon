@@ -70,7 +70,7 @@ void CDownload::stop()
 	}
 	else
 	{
-		m_data.state = STATE_ABORTED;
+		m_data.state = STATE_ABORTING;
 		m_data.update = true;
 
 		if(m_reply != 0)
@@ -87,8 +87,11 @@ void CDownload::stop()
 
 void CDownload::retry()
 {
-	if(m_data.state == STATE_ABORTED || --m_data.triesLeft == 0)
+	if(m_data.state == STATE_ABORTING || --m_data.triesLeft == 0)
 	{
+		m_data.state = STATE_ABORTED;
+		m_data.update = true;
+
 		emit done(false);
 	}
 	else
@@ -290,7 +293,7 @@ void CDownload::handleNetError()
 		m_file = 0;
 	}
 
-	if(m_data.state != STATE_ABORTED)
+	if(m_data.state != STATE_ABORTING)
 	{
 		m_data.state = STATE_NET_ERROR;
 		m_data.miscState = m_reply->error();
@@ -313,7 +316,7 @@ void CDownload::handleError(Errors error)
 		m_file = 0;
 	}
 
-	if(m_data.state != STATE_ABORTED)
+	if(m_data.state != STATE_ABORTING)
 	{
 		m_data.state = STATE_ERROR;
 		m_data.miscState = error;
