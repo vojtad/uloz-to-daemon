@@ -44,7 +44,7 @@ struct DownloadData
 		update = false;
 		lastSpeedCalcTime = 0;
 		lastSpeedCalcBytes = 0;
-		triesLeft = 10;
+		triesLeft = 20;
 	}
 
 	DownloadData(const DownloadData & data) :

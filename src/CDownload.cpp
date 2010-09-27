@@ -41,8 +41,7 @@ const DownloadData & CDownload::data() const
 
 void CDownload::start()
 {
-	if(m_data.fileName.isEmpty())
-		m_data.fileName = m_data.url.split('/').last();
+	m_data.fileName = m_data.url.split('/').last();
 	if(m_data.fileName.isEmpty())
 		m_data.fileName = QString("file_%1").arg(m_data.url);
 
@@ -87,11 +86,15 @@ void CDownload::stop()
 
 void CDownload::retry()
 {
-	if(m_data.state == STATE_ABORTING || --m_data.triesLeft == 0)
+	if(m_data.state == STATE_ABORTING)
 	{
 		m_data.state = STATE_ABORTED;
 		m_data.update = true;
 
+		emit done(false);
+	}
+	else if(--m_data.triesLeft == 0)
+	{
 		emit done(false);
 	}
 	else
@@ -293,6 +296,8 @@ void CDownload::handleNetError()
 		delete m_file;
 		m_file = 0;
 	}
+
+	qDebug() << "Net error:" << m_reply->error() << m_reply->errorString();
 
 	if(m_data.state != STATE_ABORTING)
 	{
