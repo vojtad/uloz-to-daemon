@@ -214,15 +214,16 @@ void CDownload::beginDownload()
 			}
 
 			quint32 i = 1;
-			QFileInfo info(QDir::temp().filePath(m_data.fileName));
-			while(QFile::exists(QDir::temp().filePath(m_data.fileName)))
+			QDir dir(m_data.downloadDir);
+			QFileInfo info(dir.filePath(m_data.fileName));
+			while(QFile::exists(dir.filePath(m_data.fileName)))
 			{
 				m_data.fileName = QString("%1 (%2).%3").arg(info.baseName(),
 															QString::number(i++),
 															info.completeSuffix());
 			}
 
-			m_file = new QFile(QDir::temp().filePath(m_data.fileName));
+			m_file = new QFile(dir.filePath(m_data.fileName));
 			if(!m_file->open(QIODevice::WriteOnly))
 			{
 				handleError(ERROR_CANNOT_OPEN_FILE);

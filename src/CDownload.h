@@ -52,6 +52,7 @@ struct DownloadData
 		url(data.url),
 		userAgent(data.userAgent),
 		fileName(data.fileName),
+		downloadDir(data.downloadDir),
 		state(data.state),
 		miscState(data.miscState),
 		downloaded(data.downloaded),
@@ -70,6 +71,7 @@ struct DownloadData
 	QString userAgent;
 
 	QString fileName;
+	QString downloadDir;
 	DownloadState state:8;
 	quint16 miscState;
 	qint64 downloaded;

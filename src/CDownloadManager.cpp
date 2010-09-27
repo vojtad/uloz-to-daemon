@@ -53,6 +53,7 @@ void CDownloadManager::addDownload(const QString & url, bool autoStart)
 {
 	DownloadData data;
 	data.url = url;
+	data.downloadDir = m_downloadDir;
 	if(m_queue && autoStart)
 		data.state = STATE_WAITING;
 
