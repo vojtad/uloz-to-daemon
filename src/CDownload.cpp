@@ -24,9 +24,13 @@ CDownload::CDownload(const DownloadData & data, QObject * parent) :
 	m_data.id = m_idGenerator.fetchAndAddRelaxed(1);
 	m_data.update = true;
 
+	m_timeoutTimer.setInterval(10000);
+	m_timer.setSingleShot(true);
 	m_timer.setInterval(2000);
 	m_timer.setSingleShot(true);
+
 	connect(&m_timer, SIGNAL(timeout()), this, SLOT(start()));
+	connect(&m_timeoutTimer, SIGNAL(timeout()), this, SLOT(netTimeout()));
 }
 
 DownloadData & CDownload::data()
@@ -51,10 +55,18 @@ void CDownload::start()
 
 	m_reply = m_manager->get(request);
 	connect(m_reply, SIGNAL(finished()), this, SLOT(retrieveCaptchaUrl()));
+	connect(m_reply, SIGNAL(uploadProgress(qint64, qint64)), &m_timeoutTimer, SLOT(start()));
+	connect(m_reply, SIGNAL(finished()), &m_timeoutTimer, SLOT(stop()));
 
 	m_data.state = STATE_RETRIEVING_URL;
 	m_data.miscState = 0;
 	m_data.update = true;
+}
+
+void CDownload::netTimeout()
+{
+	qDebug() << "Net timeout" << m_data.fileName << m_data.id;
+	m_reply->abort();
 }
 
 void CDownload::stop()
@@ -93,12 +105,15 @@ void CDownload::retry()
 
 		emit done(false);
 	}
-	else if(--m_data.triesLeft == 0)
+	else if(m_data.triesLeft == 0)
 	{
 		emit done(false);
 	}
 	else
 	{
+		--m_data.triesLeft;
+		m_data.downloaded = 0;
+		m_data.size = 0;
 		m_data.state = STATE_WILL_RETRY;
 		m_data.miscState = 0;
 		m_data.update = true;
@@ -145,6 +160,8 @@ void CDownload::retrieveCaptchaUrl()
 			m_reply = m_manager->get(request);
 
 			connect(m_reply, SIGNAL(finished()), this, SLOT(downloadAndSolveCaptcha()));
+			connect(m_reply, SIGNAL(uploadProgress(qint64, qint64)), &m_timeoutTimer, SLOT(start()));
+			connect(m_reply, SIGNAL(finished()), &m_timeoutTimer, SLOT(stop()));
 
 			m_data.state = STATE_CAPTCHA;
 			m_data.update = true;
@@ -195,6 +212,8 @@ void CDownload::captchaSolved(bool ok, const QString & captcha)
 		m_reply = m_manager->post(request, postData.toAscii());
 
 		connect(m_reply, SIGNAL(finished()), this, SLOT(beginDownload()));
+		connect(m_reply, SIGNAL(uploadProgress(qint64, qint64)), &m_timeoutTimer, SLOT(start()));
+		connect(m_reply, SIGNAL(finished()), &m_timeoutTimer, SLOT(stop()));
 	}
 	else
 	{
@@ -241,10 +260,14 @@ void CDownload::beginDownload()
 			m_reply->deleteLater();
 			m_reply = m_manager->get(request);
 
+			m_timeoutTimer.setInterval(30000);
+
 			connect(m_reply, SIGNAL(downloadProgress(qint64,qint64)),
 					this, SLOT(updateProgress(qint64,qint64)));
 			connect(m_reply, SIGNAL(readyRead()), this, SLOT(writeData()));
 			connect(m_reply, SIGNAL(finished()), this, SLOT(finishDownload()));
+			connect(m_reply, SIGNAL(uploadProgress(qint64, qint64)), &m_timeoutTimer, SLOT(start()));
+			connect(m_reply, SIGNAL(finished()), &m_timeoutTimer, SLOT(stop()));
 
 			m_data.state = STATE_DOWNLOADING;
 			m_data.update = true;
@@ -260,19 +283,24 @@ void CDownload::finishDownload()
 {
 	if(m_reply->isFinished() && m_reply->error() == QNetworkReply::NoError)
 	{
-		m_data.size = m_file->size();
-		m_data.downloaded = m_data.size;
-		m_data.state = STATE_FINISHED;
-		m_data.update = true;
+		if(m_data.size == 0)
+		{
+			retry();
+		}
+		else
+		{
+			m_data.state = STATE_FINISHED;
+			m_data.update = true;
 
-		m_file->close();
-		delete m_file;
-		m_file = 0;
+			m_file->close();
+			delete m_file;
+			m_file = 0;
 
-		m_reply->deleteLater();
-		m_reply = 0;
+			m_reply->deleteLater();
+			m_reply = 0;
 
-		emit done(true);
+			emit done(true);
+		}
 	}
 	else
 	{
@@ -289,37 +317,46 @@ void CDownload::updateProgress(qint64 downloaded, qint64 size)
 
 void CDownload::handleNetError()
 {
-	if(m_file != 0)
+	if(m_file != 0 && m_file->isOpen())
 	{
-		if(m_file->isOpen())
-			m_file->close();
-		delete m_file;
-		m_file = 0;
+		m_file->close();
 	}
 
-	qDebug() << "Net error:" << m_reply->error() << m_reply->errorString();
+	qDebug() << "Net error:" << m_reply->error() << m_reply->errorString() << m_data.id << m_data.fileName;
 
 	if(m_data.state != STATE_ABORTING)
 	{
 		m_data.state = STATE_NET_ERROR;
 		m_data.miscState = m_reply->error();
 		m_data.update = true;
+
+		if(m_file != 0)
+		{
+			m_file->remove();
+		}
 	}
 
+	delete m_file;
+	m_file = 0;
 	m_reply->deleteLater();
 	m_reply = 0;
 
-	retry();
-}
-
-void CDownload::handleError(Errors error)
-{
 	if(m_file != 0)
 	{
 		if(m_file->isOpen())
 			m_file->close();
 		delete m_file;
 		m_file = 0;
+	}
+
+	retry();
+}
+
+void CDownload::handleError(Errors error)
+{
+	if(m_file != 0 && m_file->isOpen())
+	{
+		m_file->close();
 	}
 
 	if(m_data.state != STATE_ABORTING)
@@ -327,8 +364,15 @@ void CDownload::handleError(Errors error)
 		m_data.state = STATE_ERROR;
 		m_data.miscState = error;
 		m_data.update = true;
+
+		if(m_file != 0)
+		{
+			m_file->remove();
+		}
 	}
 
+	delete m_file;
+	m_file = 0;
 	if(m_reply != 0)
 	{
 		m_reply->deleteLater();
@@ -361,18 +405,30 @@ void DownloadData::unserialize(QDataStream & stream)
 
 void DownloadData::recalcSpeed()
 {
-	if(lastSpeedCalcTime > 0)
+	time_t now = QDateTime::currentDateTime().toTime_t();
+	if((now - lastSpeedCalcTime) != 0)
 	{
-		time_t now = QDateTime::currentDateTime().toTime_t();
 		speed = (downloaded - lastSpeedCalcBytes) / (now - lastSpeedCalcTime);
 		lastSpeedCalcTime = now;
 	}
 	else
 	{
-		lastSpeedCalcTime = QDateTime::currentDateTime().toTime_t();
+		lastSpeedCalcTime = now;
 	}
 
 	lastSpeedCalcBytes = downloaded;
+}
+
+void DownloadData::reset()
+{
+	downloaded = 0;
+	size = 0;
+	speed = 0;
+	triesLeft = DOWNLOAD_TRIES;
+	lastSpeedCalcTime = 0;
+	lastSpeedCalcBytes = 0;
+
+	update = true;
 }
 
 bool DownloadData::canRemove() const

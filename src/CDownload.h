@@ -8,6 +8,8 @@
 #include <QTimer>
 #include <QWaitCondition>
 
+#define DOWNLOAD_TRIES 100
+
 enum DownloadState
 {
 	STATE_NONE = 0,
@@ -41,10 +43,10 @@ struct DownloadData
 		downloaded = 0;
 		size = 0;
 		speed = 0;
+		triesLeft = DOWNLOAD_TRIES;
 		update = false;
 		lastSpeedCalcTime = 0;
 		lastSpeedCalcBytes = 0;
-		triesLeft = 20;
 	}
 
 	DownloadData(const DownloadData & data) :
@@ -82,6 +84,7 @@ struct DownloadData
 	void serialize(QDataStream & stream) const;
 	void unserialize(QDataStream & stream);
 	void recalcSpeed();
+	void reset();
 
 	bool canRemove() const;
 	bool canStart() const;
@@ -120,12 +123,13 @@ class CDownload : public QObject
 		quint32 m_captchaId;
 		QString m_submitUrl;
 		QTimer m_timer;
-		QWaitCondition m_stopCond;
+		QTimer m_timeoutTimer;
 
 		static QAtomicInt m_idGenerator;
 
 	public slots:
 		void start();
+		void netTimeout();
 
 	private slots:
 		void retrieveCaptchaUrl();

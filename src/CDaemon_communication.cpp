@@ -19,10 +19,10 @@ void CDaemon::handleClientRead()
 {
 	QTcpSocket * socket = qobject_cast<QTcpSocket *>(sender());
 
-	while(socket->bytesAvailable() > 4)
+	while(socket->bytesAvailable() > 8)
 	{
 		QDataStream stream(socket);
-		quint32 size;
+		quint64 size;
 
 		stream >> size;
 		if(socket->bytesAvailable() >= size)
@@ -109,7 +109,7 @@ void CDaemon::sendUpdate()
 			QByteArray buffer;
 			QDataStream stream(&buffer, QIODevice::WriteOnly);
 
-			stream << quint32(0); // placeholder
+			stream << quint64(0); // placeholder
 			stream << quint8(OPCODE_LIST);
 
 			foreach(CDownload * download, m_downloadManager.downloads())
@@ -119,7 +119,7 @@ void CDaemon::sendUpdate()
 			}
 
 			stream.device()->seek(0);
-			stream << quint32(buffer.size() - sizeof(quint32));
+			stream << quint64(buffer.size() - sizeof(quint64));
 
 			foreach(QTcpSocket * c, m_clients)
 			{
@@ -136,7 +136,7 @@ void CDaemon::sendUpdate()
 			QByteArray buffer;
 			QDataStream stream(&buffer, QIODevice::WriteOnly);
 
-			stream << quint32(0); // placeholder
+			stream << quint64(0); // placeholder
 			stream << quint8(OPCODE_REMOVE);
 
 			while(!removed.isEmpty())
@@ -146,7 +146,7 @@ void CDaemon::sendUpdate()
 			}
 
 			stream.device()->seek(0);
-			stream << quint32(buffer.size() - sizeof(quint32));
+			stream << quint64(buffer.size() - sizeof(quint64));
 
 			foreach(QTcpSocket * c, m_clients)
 			{

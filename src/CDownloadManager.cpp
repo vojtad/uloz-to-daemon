@@ -99,6 +99,7 @@ void CDownloadManager::startDownload(quint32 i)
 	{
 		if(!m_queue || m_activeCount < m_maxDownloads)
 		{
+			download->data().reset();
 			download->start();
 			++m_activeCount;
 		}

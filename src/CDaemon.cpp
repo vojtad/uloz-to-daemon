@@ -123,7 +123,7 @@ void CDaemon::loadSettings()
 	m_settings.beginGroup("downloads");
 	m_downloadManager.setQueue(m_settings.value("queueEnabled", true).toBool());
 	m_downloadManager.setMaxDownloads(m_settings.value("maxActiveDownloads", 5).toUInt());
-//	m_downloadManager.setUserAgents(m_settings.value("userAgents").toStringList());
+	m_downloadManager.setUserAgents(m_settings.value("userAgents").toStringList());
 	m_downloadManager.setDownloadDir(m_settings.value("downloadDir", QDir::homePath()).toString());
 	m_settings.endGroup();
 
