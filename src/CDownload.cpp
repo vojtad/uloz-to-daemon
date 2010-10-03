@@ -65,7 +65,6 @@ void CDownload::start()
 
 void CDownload::netTimeout()
 {
-	qDebug() << "Net timeout" << m_data.fileName << m_data.id;
 	m_reply->abort();
 }
 
@@ -124,7 +123,20 @@ void CDownload::retry()
 
 void CDownload::retrieveCaptchaUrl()
 {
-	if(m_reply->isFinished() && m_reply->error() == QNetworkReply::NoError)
+	if(m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).isValid())
+	{
+		m_reply->deleteLater();
+
+		QNetworkRequest request;
+		request.setUrl(m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl());
+		request.setRawHeader("User-Agent", m_data.userAgent.toAscii());
+
+		m_reply = m_manager->get(request);
+		connect(m_reply, SIGNAL(finished()), this, SLOT(retrieveCaptchaUrl()));
+		connect(m_reply, SIGNAL(uploadProgress(qint64, qint64)), &m_timeoutTimer, SLOT(start()));
+		connect(m_reply, SIGNAL(finished()), &m_timeoutTimer, SLOT(stop()));
+	}
+	else if(m_reply->error() == QNetworkReply::NoError)
 	{
 		QByteArray data = m_reply->readAll();
 		QRegExp rxSubmitUrl("form name=\"dwn\" action=\"([^\"]+)\"");
@@ -175,7 +187,7 @@ void CDownload::retrieveCaptchaUrl()
 
 void CDownload::downloadAndSolveCaptcha()
 {
-	if(m_reply->isFinished() && m_reply->error() == QNetworkReply::NoError)
+	if(m_reply->error() == QNetworkReply::NoError)
 	{
 		QByteArray data = m_reply->readAll();
 
@@ -204,7 +216,6 @@ void CDownload::captchaSolved(bool ok, const QString & captcha)
 
 		postData.append(QString("captcha_nb=%1").arg(m_captchaId));
 		postData.append(QString("&captcha_user=%1").arg(captcha));
-		postData.append("&download=Stáhnout+FREE");
 
 		request.setUrl(QUrl(m_submitUrl));
 		request.setRawHeader("User-Agent", m_data.userAgent.toAscii());
@@ -223,7 +234,7 @@ void CDownload::captchaSolved(bool ok, const QString & captcha)
 
 void CDownload::beginDownload()
 {
-	if(m_reply->isFinished() && m_reply->error() == QNetworkReply::NoError)
+	if(m_reply->error() == QNetworkReply::NoError)
 	{
 		QVariant redir = m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
 		if(redir.isValid())
@@ -321,8 +332,6 @@ void CDownload::handleNetError()
 	{
 		m_file->close();
 	}
-
-	qDebug() << "Net error:" << m_reply->error() << m_reply->errorString() << m_data.id << m_data.fileName;
 
 	if(m_data.state != STATE_ABORTING)
 	{
