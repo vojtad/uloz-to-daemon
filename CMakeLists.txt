@@ -33,3 +33,6 @@ qt4_wrap_cpp(MOC_SRCS ${MOC_HDRS})
 
 add_executable(uloz-to-daemon ${SRCS} ${MOC_SRCS})
 target_link_libraries(uloz-to-daemon ${QT_LIBRARIES} -lmad)
+
+install(TARGETS uloz-to-daemon DESTINATION bin)
+install(FILES "${PROJECT_SOURCE_DIR}/data/samples" DESTINATION "share/${PROJECT_NAME}")
