@@ -446,10 +446,10 @@ bool DownloadData::canRemove() const
 			state == STATE_NET_ERROR || state == STATE_ABORTED);
 }
 
-bool DownloadData::canStart() const
+bool DownloadData::canStart(bool queue) const
 {
 	return (state == STATE_NONE || state == STATE_NET_ERROR || state == STATE_ERROR ||
-			state == STATE_ABORTED);
+			state == STATE_ABORTED || (!queue && state == STATE_WAITING));
 }
 
 bool DownloadData::canAbort() const

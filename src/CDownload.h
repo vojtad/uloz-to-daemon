@@ -87,7 +87,7 @@ struct DownloadData
 	void reset();
 
 	bool canRemove() const;
-	bool canStart() const;
+	bool canStart(bool queue) const;
 	bool canAbort() const;
 
 	bool update;

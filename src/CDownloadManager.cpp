@@ -99,7 +99,7 @@ void CDownloadManager::startDownload(quint32 i)
 {
 	CDownload * download = findDownload(i);
 
-	if(download != 0 && download->data().canStart())
+	if(download != 0 && download->data().canStart(m_queue))
 	{
 		if(!m_queue || m_activeCount < m_maxDownloads)
 		{
