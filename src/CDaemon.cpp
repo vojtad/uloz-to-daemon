@@ -128,7 +128,8 @@ void CDaemon::loadSettings()
 	m_settings.endGroup();
 
 	m_settings.beginGroup("captchaSolver");
-	m_captchaLettersFile = m_settings.value("lettersFile").toString();
+	m_captchaLettersFile = m_settings.value("lettersFile",
+											"/usr/share/uloz-to-daemon/samples").toString();
 	m_settings.endGroup();
 }
 
