@@ -42,6 +42,8 @@ void CDaemon::handleClientRead()
 				handleStart(bStream); break;
 			case OPCODE_STOP:
 				handleAbort(bStream); break;
+			case OPCODE_QUEUE:
+				handleQueue(bStream); break;
 			default:
 				qWarning() << "Unhandled packet:" << quint32(opcode); break;
 			}
@@ -104,6 +106,27 @@ void CDaemon::sendUpdate()
 {
 	if(!m_clients.isEmpty())
 	{
+		{
+			QByteArray buffer;
+			QDataStream stream(&buffer, QIODevice::WriteOnly);
+
+			stream << quint64(0); // placeholder
+			stream << quint8(OPCODE_QUEUE);
+			stream << m_downloadManager.queue();
+			stream << quint8(m_downloadManager.maxDownloads());
+
+			stream.device()->seek(0);
+			stream << quint64(buffer.size() - sizeof(quint64));
+
+			foreach(QTcpSocket * c, m_clients)
+			{
+				if(c->isWritable())
+				{
+					c->write(buffer);
+				}
+			}
+		}
+
 		if(!m_downloadManager.downloads().isEmpty())
 		{
 			QByteArray buffer;
@@ -157,4 +180,16 @@ void CDaemon::sendUpdate()
 			}
 		}
 	}
+}
+
+void CDaemon::handleQueue(QDataStream & stream)
+{
+	bool enable;
+	quint8 max;
+
+	stream >> enable;
+	stream >> max;
+
+	m_downloadManager.setQueue(enable);
+	m_downloadManager.setMaxDownloads(max);
 }
