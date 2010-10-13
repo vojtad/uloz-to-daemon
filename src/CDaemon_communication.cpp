@@ -184,7 +184,7 @@ void CDaemon::sendUpdate()
 
 void CDaemon::handleQueue(QDataStream & stream)
 {
-	bool enable;
+	bool enable, startDownloads;
 	quint8 max;
 
 	stream >> enable;

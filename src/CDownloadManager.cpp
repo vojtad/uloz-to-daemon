@@ -16,7 +16,11 @@ quint8 CDownloadManager::maxDownloads() const
 
 void CDownloadManager::setMaxDownloads(quint8 count)
 {
+	quint8 old = m_maxDownloads;
+
 	m_maxDownloads = count;
+	if(count > old)
+		startDownloads();
 }
 
 const QStringList & CDownloadManager::userAgents() const
@@ -76,7 +80,7 @@ void CDownloadManager::addDownload(const QString & url, bool autoStart)
 
 void CDownloadManager::startDownloads()
 {
-	if(!m_queue || m_activeCount == m_maxDownloads)
+	if(!m_queue || m_activeCount >= m_maxDownloads)
 		return;
 
 	foreach(CDownload * d, m_downloads)
