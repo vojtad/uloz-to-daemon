@@ -19,6 +19,7 @@ CDownload::CDownload(const DownloadData & data, QObject * parent) :
 	m_file(0),
 	m_manager(new QNetworkAccessManager(this)),
 	m_reply(0),
+	m_captcha(0),
 	m_data(data)
 {
 	m_data.id = m_idGenerator.fetchAndAddRelaxed(1);
