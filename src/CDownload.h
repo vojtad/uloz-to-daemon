@@ -153,6 +153,7 @@ class CDownload : public QObject
 		void retrieveCaptchaUrl();
 		void downloadAndSolveCaptcha();
 		void captchaSolved(bool ok, const QString & captcha);
+		void preDownloadRedirect();
 		void beginDownload();
 		void finishDownload();
 

@@ -241,13 +241,47 @@ void CDownload::captchaSolved(bool ok, const QString & captcha)
 		request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 		m_reply = m_manager->post(request, postData.toAscii());
 
-		connect(m_reply, SIGNAL(finished()), this, SLOT(beginDownload()));
+		connect(m_reply, SIGNAL(finished()), this, SLOT(preDownloadRedirect()));
 		connect(m_reply, SIGNAL(uploadProgress(qint64, qint64)), &m_timeoutTimer, SLOT(start()));
 		connect(m_reply, SIGNAL(finished()), &m_timeoutTimer, SLOT(stop()));
 	}
 	else
 	{
 		handleError(ERROR_CANNOT_SOLVE_CAPTCHA);
+	}
+}
+
+void CDownload::preDownloadRedirect()
+{
+	if(m_reply->error() == QNetworkReply::NoError)
+	{
+		QVariant redir = m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
+		if(redir.isValid())
+		{
+			QString url = redir.toString();
+			if(url.indexOf("no#cpt") != -1)
+			{
+				handleError(ERROR_CANNOT_SOLVE_CAPTCHA);
+				return;
+			}
+
+			QNetworkRequest request;
+			request.setUrl(QUrl(m_reply->rawHeader("Location")));
+			request.setRawHeader("User-Agent", m_data.userAgent.toAscii());
+
+			m_reply = m_manager->get(request);
+
+			connect(m_reply, SIGNAL(finished()), this, SLOT(beginDownload()));
+			connect(m_reply, SIGNAL(uploadProgress(qint64, qint64)), &m_timeoutTimer, SLOT(start()));
+			connect(m_reply, SIGNAL(finished()), &m_timeoutTimer, SLOT(stop()));
+
+			m_data.state = STATE_DOWNLOADING;
+			m_data.update = true;
+		}
+	}
+	else
+	{
+		handleNetError();
 	}
 }
 
@@ -298,9 +332,6 @@ void CDownload::beginDownload()
 			connect(m_reply, SIGNAL(finished()), this, SLOT(finishDownload()));
 			connect(m_reply, SIGNAL(uploadProgress(qint64, qint64)), &m_timeoutTimer, SLOT(start()));
 			connect(m_reply, SIGNAL(finished()), &m_timeoutTimer, SLOT(stop()));
-
-			m_data.state = STATE_DOWNLOADING;
-			m_data.update = true;
 		}
 	}
 	else
