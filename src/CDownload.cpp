@@ -64,10 +64,6 @@ const DownloadData & CDownload::data() const
 
 void CDownload::start()
 {
-	m_data.fileName = m_data.name;
-	if(m_data.fileName.isEmpty())
-		m_data.fileName = QString("file_%1").arg(m_data.url);
-
 	QNetworkRequest request;
 	request.setUrl(QUrl(m_data.url));
 	request.setRawHeader("User-Agent", m_data.userAgent.toAscii());
@@ -160,6 +156,13 @@ void CDownload::retrieveCaptchaUrl()
 		QByteArray data = m_reply->readAll();
 		QRegExp rxSubmitUrl("form name=\"dwn\" action=\"([^\"]+)\"");
 		QRegExp rxCaptchaId("name=\"captcha_nb\" value=\"([0-9]+)\"");
+
+		if(m_data.name.isEmpty()) // parse file name from html
+		{
+			QRegExp rxName("<h2[^>]*>[^<]*<a href=[^>]*>([^<]+)</a>[^<]*</h2>");
+			if(rxName.indexIn(data) != -1)
+				m_data.name = rxName.cap(1);
+		}
 
 		m_reply->deleteLater();
 		m_reply = 0;
@@ -298,6 +301,11 @@ void CDownload::beginDownload()
 				handleError(ERROR_CANNOT_SOLVE_CAPTCHA);
 				return;
 			}
+
+			if(m_data.name.isEmpty())
+				m_data.fileName = QString("file_%1").arg(m_data.url);
+			else
+				m_data.fileName = m_data.name;
 
 			quint32 i = 1;
 			QDir dir(m_data.downloadDir);
