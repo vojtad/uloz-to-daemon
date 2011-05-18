@@ -71,9 +71,10 @@ void CDownloadManager::setDownloadDir(const QString & dir)
 	m_downloadDir = dir;
 }
 
-void CDownloadManager::addDownload(const QString & url, bool autoStart)
+void CDownloadManager::addDownload(const QString & name, const QString & url, bool autoStart)
 {
 	DownloadData data;
+	data.name = name;
 	data.url = url;
 	data.downloadDir = m_downloadDir;
 	if(m_queue && autoStart)

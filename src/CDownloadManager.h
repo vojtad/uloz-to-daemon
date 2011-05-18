@@ -54,7 +54,7 @@ class CDownloadManager : public QObject
 		bool queue() const;
 		void setQueue(bool active);
 
-		void addDownload(const QString & url, bool autoStart);
+		void addDownload(const QString & name, const QString & url, bool autoStart);
 		void startDownloads();
 		void startDownload(quint32 i);
 		void removeDownload(quint32 i);

@@ -78,12 +78,12 @@ void CDaemon::handleClientDisconnected()
 void CDaemon::handleAdd(QDataStream & stream)
 {
 	bool autoStart = false;
-	QString url;
+	QString url, name;
 
 	while(!stream.atEnd())
 	{
-		stream >> autoStart >> url;
-		m_downloadManager.addDownload(url, autoStart);
+		stream >> autoStart >> url >> name;
+		m_downloadManager.addDownload(name, url, autoStart);
 	}
 }
 

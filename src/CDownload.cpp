@@ -64,7 +64,7 @@ const DownloadData & CDownload::data() const
 
 void CDownload::start()
 {
-	m_data.fileName = m_data.url.split('/').last();
+	m_data.fileName = m_data.name;
 	if(m_data.fileName.isEmpty())
 		m_data.fileName = QString("file_%1").arg(m_data.url);
 
@@ -448,7 +448,7 @@ void CDownload::writeData()
 
 void DownloadData::serialize(QDataStream & stream) const
 {
-	stream << id << url << userAgent << fileName << quint8(state) << miscState
+	stream << id << name << url << userAgent << fileName << quint8(state) << miscState
 			<< downloaded << size << speed;
 }
 
@@ -456,7 +456,7 @@ void DownloadData::unserialize(QDataStream & stream)
 {
 	quint8 st;
 
-	stream >> id >> url >> userAgent >> fileName >> st >> miscState
+	stream >> id >> name >> url >> userAgent >> fileName >> st >> miscState
 			>> downloaded >> size >> speed;
 
 	state = DownloadState(st);
